@@ -1,0 +1,30 @@
+#!/bin/bash
+if [ "$1" == "-u" -o ! -a .archnews.txt ]
+	then
+		curl -s https://archlinux.org/news/ > .archnews.txt
+
+else if [ "$1" == "-r" ]
+	then
+		n=0
+		if [ -n "$2" ]
+			then
+			let n=$2-1
+		fi
+		curl -s https://archlinux.org/news/$(awk -v e=$n 'BEGIN{FS="\"";a=0;}$0~/title="View:/{gsub(/&gt;/,"");gsub(/&lt;/,"");gsub(/[!@#\$%\^&\*\(\),\.\+=\\\/\<\>]/,"");gsub(/ /,"-");$2=tolower($2);if (a==e)print substr($2,7);a++}' .archnews.txt)/ > .newspage.txt
+		awk '/<title>Arch Linux/{gsub(/\//,"");split($0, flds, "<title>");printf("//  %s  //\n",flds [2])}/article-info/{split($0,arr,">");gsub(/<\/p/,"",arr[2]);printf("%s\n\n",arr[2]);}/article-content/{split($0,arr,"<p>");arr[2]=rem(arr[2]);printf("%s\n",arr[2]);getline var;rem(var); while (var !~ /<\/div>/) { rem(var); printf("%s\n",var); getline var; } gsub(/<code>|<\/code>|<em>|<\/em>|<p>|<\/p>|<div>|<\/div>/,"",var); print var; } function rem(v1) { var = v1; gsub(/<p>/,"\n\n",var); gsub(/<[^>]*>/,"",var); return var;}' .newspage.txt
+		rm .newspage.txt
+		exit 0
+
+else if [ -n "$1" -a "$1" != "-n" ]
+		then
+			printf "usage: archnews [OPTION]\n\n  -n, Number of recent lines to read\n  -u, Update news listing\n  -r, Read news article, reads most recent article by default\n"
+			exit 1
+	fi
+fi
+if [ -z "$2" ]
+	then 
+		awk 'BEGIN{FS="\""}$0~/<td>20/{s=substr($0,21,10);printf("[%s] ",s);}$0~/title="View:/{gsub(/&gt;/,">");gsub(/&lt;/,"<");print substr($2,7)}' .archnews.txt
+	else
+		awk -v e=$2 'BEGIN{FS="\"";a=0}$0~/<td>20/{s=substr($0,21,10);if (a<e)printf("[%s] ",s);}$0~/title="View:/{gsub(/&gt;/,">");gsub(/&lt;/,"<");if (a<e)print substr($2,7);a++}' .archnews.txt
+fi
+fi
